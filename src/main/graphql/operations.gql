@@ -1,0 +1,17 @@
+mutation collectGenerations($generations: [GenerationInput!]!, $projectId: UUID) {
+    collect(generations: $generations, projectId: $projectId) {
+        success
+        error {
+            message
+        }
+    }
+}
+
+query apiKey {
+    apiKey {
+        name
+        scope
+        createdTs
+        enabled
+    }
+}
