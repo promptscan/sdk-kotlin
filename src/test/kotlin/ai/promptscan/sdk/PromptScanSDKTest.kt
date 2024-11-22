@@ -8,7 +8,13 @@ import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.BeforeAll
+import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
+import java.util.logging.LogManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -17,13 +23,16 @@ class PromptScanSDKTest {
 
     @BeforeEach
     fun setUp() {
+        val stream = PromptScanSDKTest::class.java.getResourceAsStream("/logging.properties")
+        LogManager.getLogManager().readConfiguration(stream)
+
         unmockkAll()
         mockkConstructor(GraphQLClient::class)
     }
 
     @AfterEach
     fun tearDown() {
-        unmockkConstructor(GraphQLClient::class)
+        unmockkAll()
     }
 
     @Test
@@ -132,5 +141,46 @@ class PromptScanSDKTest {
         unmockkObject(sdk)
     }
 
+    @Test
+    fun testEnabled() = runBlocking {
+        coEvery {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>(), any())
+        } answers {
+            CollectGenerationsMutation.Data(CollectGenerationsMutation.Collect(success = true, error = null))
+        }
 
+        val sdk = PromptScanSDK.builder().enabled(false).autoFlush(false).build()
+        sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
+        sdk.flush()
+
+        coVerify(exactly = 0) {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>())
+        }
+
+        sdk.setEnabled(true)
+        sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
+        sdk.flush()
+
+        coVerify(exactly = 1) {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>())
+        }
+
+        clearConstructorMockk(GraphQLClient::class, answers = false)
+        sdk.setEnabled(false)
+        sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
+        sdk.flush()
+
+        coVerify(exactly = 0) {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>())
+        }
+    }
+
+
+    @Test
+    fun testDebugLogging() = runBlocking {        
+        val logger = LoggerFactory.getLogger(PromptScanSDK::class.java)
+        assertTrue(logger.isWarnEnabled)
+        assertFalse(logger.isInfoEnabled)
+        // TODO: implement dynamic log level change
+    }
 }
