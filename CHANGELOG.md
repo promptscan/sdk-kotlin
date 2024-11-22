@@ -1,14 +1,11 @@
 # Changelog
 
 ### Added
-- Initial release of the PromptScan Kotlin SDK
-- GraphQL client implementation
-- Basic SDK functionality for interacting with PromptScan API
-- Java and Kotlin support
-- Unit tests for core functionality
+- N/A
 
 ### Changed
-- N/A
+- generation logging can now be enabled/disabled via `sdk.setEnabled(boolean)`
+- updated GraphQL schema
 
 ### Deprecated
 - N/A
