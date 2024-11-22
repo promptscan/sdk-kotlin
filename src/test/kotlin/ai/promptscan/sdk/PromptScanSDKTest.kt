@@ -2,6 +2,7 @@ package ai.promptscan.sdk
 
 import ai.promptscan.sdk.client.CollectGenerationsMutation
 import ai.promptscan.sdk.client.type.GenerationInput
+import ai.promptscan.sdk.client.type.KeyValuePairInput
 import ai.promptscan.sdk.graphql.GraphQLClient
 import com.apollographql.apollo3.api.Optional
 import io.mockk.*
@@ -11,9 +12,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.BeforeAll
 import org.slf4j.LoggerFactory
-import org.slf4j.event.Level
 import java.util.logging.LogManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -106,7 +105,6 @@ class PromptScanSDKTest {
 
         val sdk = PromptScanSDK.builder().autoFlush(false).build();
         sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
-
         assertEquals(sdk.estimateGenerationsInFlightCount(), 1)
 
         sdk.flush()
@@ -182,5 +180,35 @@ class PromptScanSDKTest {
         assertTrue(logger.isWarnEnabled)
         assertFalse(logger.isInfoEnabled)
         // TODO: implement dynamic log level change
+    }
+
+    @Test
+    fun testDefaultMeta() = runBlocking {
+        coEvery {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>(), any())
+        } answers {
+            CollectGenerationsMutation.Data(CollectGenerationsMutation.Collect(success = true, error = null))
+        }
+
+        val defaultTags = mapOf("env" to "test", "version" to "1.0")
+        val sdk = PromptScanSDK.builder()
+            .apiKey("test-key")
+            .defaultMeta(defaultTags)
+            .autoFlush(false)
+            .build()
+            
+        sdk.collectGeneration(GenerationInput(
+            id = Optional.Present("a"),
+            model = "m",
+            messages = ArrayList(),
+            meta = Optional.Present(listOf(KeyValuePairInput("version", "2.0"), KeyValuePairInput("app", "demo")))
+        ))
+
+        val generations = sdk.flush()
+        assertEquals(generations.size, 1)
+        assertEquals(
+            generations[0].generation.meta.getOrNull()!!.toTypedArray().associate {  it.key to it.value },
+            mapOf("env" to "test", "version" to "2.0", "app" to "demo")
+        )
     }
 }
