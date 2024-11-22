@@ -10,6 +10,7 @@ version = "0.1.0"
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
@@ -19,14 +20,16 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.10")
-    
-    // Logging dependencies
-    implementation("org.slf4j:slf4j-api:2.0.9")
-    implementation("ch.qos.logback:logback-classic:1.4.11")
-    
+
+    implementation("org.slf4j:slf4j-api:2.0.16")
+
     testImplementation(kotlin("test"))
+    testImplementation(platform("org.junit:junit-bom:5.9.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.slf4j:slf4j-jdk14:2.0.16")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 
 apollo {
@@ -38,8 +41,6 @@ apollo {
         packageName.set("ai.promptscan.sdk.client")
         generateKotlinModels.set(true)
         generateDataBuilders.set(true)
-//        generateModelBuilders.set(true)
-//        generateKotlinModels.set(false)
         generateOptionalOperationVariables.set(false)
         introspection {
             endpointUrl.set("http://localhost:8020/graphql/")
