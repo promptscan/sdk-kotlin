@@ -4,8 +4,7 @@
 - N/A
 
 ### Changed
-- generation logging can now be enabled/disabled via `sdk.setEnabled(boolean)`
-- updated GraphQL schema
+- default meta tags can be passed to SDK to be appended to generation meta.
 
 ### Deprecated
 - N/A
