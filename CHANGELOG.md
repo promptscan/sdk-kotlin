@@ -4,7 +4,8 @@
 - N/A
 
 ### Changed
-- default meta tags can be passed to SDK to be appended to generation meta.
+- option for enabling / disabling debug messages.
+- java example.
 
 ### Deprecated
 - N/A

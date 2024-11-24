@@ -36,6 +36,7 @@ public class PromptScanSDKJavaTest {
         sdk = PromptScanSDK.Companion.builder()
             .apiKey("project-f47ac10b-58cc-4372-a567-0e02b2c3d479")
             .baseUrl("http://localhost:8020/graphql/")
+            .debug(true)
             .build();
     }
 

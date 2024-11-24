@@ -20,6 +20,7 @@ class PromptScanSDK private constructor(
     private val maxRetries: Int,
     private var autoFlush: Boolean,
     private var enabled: Boolean,
+    private var debug: Boolean,
     val defaultMeta: Map<String, String>
 ) : Closeable {
     companion object {
@@ -30,6 +31,7 @@ class PromptScanSDK private constructor(
             private var autoFlush: Boolean = true
             private var maxRetries: Int = 3
             private var enabled: Boolean = true
+            private var debug: Boolean = false
             private var defaultMeta: Map<String, String> = emptyMap()
 
             fun apiKey(apiKey: String) = apply { this.apiKey = apiKey }
@@ -39,6 +41,7 @@ class PromptScanSDK private constructor(
             fun enabled(enabled: Boolean) = apply { this.enabled = enabled }
             fun maxRetries(maxRetries: Int) = apply { this.maxRetries = maxRetries }
             fun defaultMeta(defaultMeta: Map<String, String>) = apply { this.defaultMeta = defaultMeta }
+            fun debug(debug: Boolean) = apply { this.debug = debug }
 
             fun build(): PromptScanSDK {
                 if (apiKey == null) {
@@ -57,9 +60,12 @@ class PromptScanSDK private constructor(
                     maxRetries,
                     autoFlush,
                     enabled,
+                    debug,
                     defaultMeta
                 )
             }
+
+
         }
 
         fun builder(): Builder = Builder()
@@ -70,11 +76,17 @@ class PromptScanSDK private constructor(
     private var flushJob: Job? = null
     private val shutdownHook = Thread {
         runBlocking {
+            if (debug) {
+                logger.debug("Shutdown hook for PromptScanSDK is triggered.")
+            }
             close()
         }
     }
 
     init {
+        if (debug) {
+            logger.debug("PromptScanSDK is initialized. Collection enabled={} with autoFlush={}.", enabled, autoFlush)
+        }
         Runtime.getRuntime().addShutdownHook(shutdownHook)
         setAutoFlush(autoFlush)
     }
@@ -82,13 +94,16 @@ class PromptScanSDK private constructor(
     private fun startPeriodicFlush() {
         flushJob = scope.launch {
             while (isActive) {
+                if (debug) {
+                    logger.debug("Periodic flush.")
+                }
                 flush()
                 delay(flushIntervalMillis)
             }
         }
     }
 
-    fun setAutoFlush(autoFlush: Boolean) {
+    private fun setAutoFlush(autoFlush: Boolean) {
         if (autoFlush && !this.autoFlush) {
             startPeriodicFlush()
         } else if (!autoFlush && this.autoFlush) {
@@ -102,15 +117,15 @@ class PromptScanSDK private constructor(
     }
 
     fun collectGeneration(generation: GenerationInput, apikey: String? = null) {
-        if (!enabled) {
-            return
+        if (debug) {
+            logger.debug("Adding generation record {} to queue.", generation.id)
         }
         generations.offer(GenerationRecord(generation, apikey))
     }
 
     fun collectGeneration(generation: GenerationInput) {
-        if (!enabled) {
-            return
+        if (debug) {
+            logger.debug("Adding generation record {} to queue.", generation.id)
         }
         generations.offer(GenerationRecord(generation, null))
     }
@@ -129,7 +144,14 @@ class PromptScanSDK private constructor(
         }
 
         if (!enabled) {
+            if (debug) {
+                logger.debug("Discarding {} records since collection is disabled.", collectableGenerations.size)
+            }
             return collectableGenerations
+        }
+
+        if (debug) {
+            logger.debug("Flushing {} records.", collectableGenerations.size)
         }
 
         val flushedGenerations = mutableListOf<GenerationRecord>()
@@ -176,6 +198,10 @@ class PromptScanSDK private constructor(
                     it.retries += 1
                     generations.offer(it)
                 }
+
+                if (debug) {
+                    logger.debug("Adding {} records back to queue for retry.", values.size)
+                }
             }
         }
 
@@ -188,6 +214,10 @@ class PromptScanSDK private constructor(
             return
         }
 
+        if (debug) {
+            logger.debug("Closing PromptScanSDK.")
+        }
+
         flushJob?.cancel()
         scope.cancel()
 
@@ -196,6 +226,10 @@ class PromptScanSDK private constructor(
         }
 
         this.graphQLClient.close()
+
+        if (debug) {
+            logger.debug("PromptScanSDK is closed.")
+        }
     }
 }
 
