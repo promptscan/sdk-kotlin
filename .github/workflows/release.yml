@@ -22,7 +22,7 @@ jobs:
           distribution: 'temurin'
           
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v4
         
       - name: Assemble
         run: ./gradlew assemble
@@ -37,7 +37,7 @@ jobs:
 #        run: ./gradlew publish -x test
         
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: build/libs/*
           generate_release_notes: true
@@ -45,3 +45,9 @@ jobs:
           prerelease: false
           body_path: CHANGELOG.md
           name: "Release ${{ github.ref_name }}"
+
+      - name: Publish package
+        run: ./gradlew publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}

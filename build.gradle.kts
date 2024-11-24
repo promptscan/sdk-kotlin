@@ -1,8 +1,9 @@
 plugins {
     kotlin("jvm") version "1.9.10"
     id("com.apollographql.apollo3") version "3.8.5"
-    // `maven-publish`
-    // signing
+    `maven-publish`
+    signing
+    java
 }
 
 group = "ai.promptscan"
@@ -10,6 +11,7 @@ version = "0.1.0"
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
@@ -19,14 +21,16 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.10")
-    
-    // Logging dependencies
-    implementation("org.slf4j:slf4j-api:2.0.9")
-    implementation("ch.qos.logback:logback-classic:1.4.11")
-    
+
+    implementation("org.slf4j:slf4j-api:2.0.16")
+
     testImplementation(kotlin("test"))
+    testImplementation(platform("org.junit:junit-bom:5.9.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.slf4j:slf4j-jdk14:2.0.16")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 
 apollo {
@@ -38,8 +42,6 @@ apollo {
         packageName.set("ai.promptscan.sdk.client")
         generateKotlinModels.set(true)
         generateDataBuilders.set(true)
-//        generateModelBuilders.set(true)
-//        generateKotlinModels.set(false)
         generateOptionalOperationVariables.set(false)
         introspection {
             endpointUrl.set("http://localhost:8020/graphql/")
@@ -70,3 +72,71 @@ java {
     withJavadocJar()
     withSourcesJar()
 }
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/promptscan/sdk-kotlin")
+            credentials {
+                username = (project.findProperty("gpr.user") as? String) ?: System.getenv("USERNAME") ?: System.getenv("GITHUB_ACTOR")
+                password = (project.findProperty("gpr.token") as? String) ?: System.getenv("TOKEN") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+
+    publications {
+        create<MavenPublication>("gpr") {
+            groupId = "ai.promptscan"
+            artifactId = "promptscan-sdk"
+            version = project.version.toString()
+            from(components["java"])
+
+            pom {
+                name.set("PromptScan SDK Kotlin")
+                description.set("Kotlin SDK for PromptScan API")
+                url.set("https://github.com/promptscan/sdk-kotlin")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+            }
+        }
+    }
+}
+
+//publishing {
+//    repositories {
+//        maven {
+//            name = "GitHubPackages"
+//            url = uri("https://maven.pkg.github.com/OWNER/REPOSITORY")
+//            credentials {
+//                username = System.getenv("GITHUB_ACTOR")
+//                password = System.getenv("GITHUB_TOKEN")
+//            }
+//        }
+//    }
+//    publications {
+//        create<MavenPublication>("maven") {
+//            groupId = "ai.promptscan"
+//            artifactId = "promptscan-sdk"
+//            version = project.version.toString()
+//
+//            from(components["java"])
+//
+//            pom {
+//                name.set("PromptScan SDK Kotlin")
+//                description.set("Kotlin SDK for PromptScan API")
+//                url.set("https://github.com/OWNER/REPOSITORY")
+//                licenses {
+//                    license {
+//                        name.set("The Apache License, Version 2.0")
+//                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}

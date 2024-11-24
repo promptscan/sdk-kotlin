@@ -938,7 +938,7 @@ input GenerationInput {
   timeToFirstToken: Float
 }
 
-input PromptTokenDetailsInput {
+input PromptTokensDetailsInput {
   cachedTokens: Int
 
   audioTokens: Int
@@ -957,7 +957,7 @@ input UsageInput {
 
   totalTokens: Int
 
-  promptTokenDetails: PromptTokenDetailsInput
+  promptTokensDetails: PromptTokensDetailsInput
 
   completionTokensDetails: CompletionTokensDetailsInput
 }

@@ -2,13 +2,18 @@ package ai.promptscan.sdk
 
 import ai.promptscan.sdk.client.CollectGenerationsMutation
 import ai.promptscan.sdk.client.type.GenerationInput
+import ai.promptscan.sdk.client.type.KeyValuePairInput
 import ai.promptscan.sdk.graphql.GraphQLClient
 import com.apollographql.apollo3.api.Optional
 import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.slf4j.LoggerFactory
+import java.util.logging.LogManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -17,13 +22,16 @@ class PromptScanSDKTest {
 
     @BeforeEach
     fun setUp() {
+        val stream = PromptScanSDKTest::class.java.getResourceAsStream("/logging.properties")
+        LogManager.getLogManager().readConfiguration(stream)
+
         unmockkAll()
         mockkConstructor(GraphQLClient::class)
     }
 
     @AfterEach
     fun tearDown() {
-        unmockkConstructor(GraphQLClient::class)
+        unmockkAll()
     }
 
     @Test
@@ -97,7 +105,6 @@ class PromptScanSDKTest {
 
         val sdk = PromptScanSDK.builder().autoFlush(false).build();
         sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
-
         assertEquals(sdk.estimateGenerationsInFlightCount(), 1)
 
         sdk.flush()
@@ -132,5 +139,76 @@ class PromptScanSDKTest {
         unmockkObject(sdk)
     }
 
+    @Test
+    fun testEnabled() = runBlocking {
+        coEvery {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>(), any())
+        } answers {
+            CollectGenerationsMutation.Data(CollectGenerationsMutation.Collect(success = true, error = null))
+        }
 
+        val sdk = PromptScanSDK.builder().enabled(false).autoFlush(false).build()
+        sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
+        sdk.flush()
+
+        coVerify(exactly = 0) {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>())
+        }
+
+        sdk.setEnabled(true)
+        sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
+        sdk.flush()
+
+        coVerify(exactly = 1) {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>())
+        }
+
+        clearConstructorMockk(GraphQLClient::class, answers = false)
+        sdk.setEnabled(false)
+        sdk.collectGeneration(GenerationInput(id = Optional.Present("a"), model = "m", messages = ArrayList()))
+        sdk.flush()
+
+        coVerify(exactly = 0) {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>())
+        }
+    }
+
+
+    @Test
+    fun testDebugLogging() = runBlocking {        
+        val logger = LoggerFactory.getLogger(PromptScanSDK::class.java)
+        assertTrue(logger.isWarnEnabled)
+        assertFalse(logger.isInfoEnabled)
+        // TODO: implement dynamic log level change
+    }
+
+    @Test
+    fun testDefaultMeta() = runBlocking {
+        coEvery {
+            anyConstructed<GraphQLClient>().mutation(any<CollectGenerationsMutation>(), any())
+        } answers {
+            CollectGenerationsMutation.Data(CollectGenerationsMutation.Collect(success = true, error = null))
+        }
+
+        val defaultTags = mapOf("env" to "test", "version" to "1.0")
+        val sdk = PromptScanSDK.builder()
+            .apiKey("test-key")
+            .defaultMeta(defaultTags)
+            .autoFlush(false)
+            .build()
+            
+        sdk.collectGeneration(GenerationInput(
+            id = Optional.Present("a"),
+            model = "m",
+            messages = ArrayList(),
+            meta = Optional.Present(listOf(KeyValuePairInput("version", "2.0"), KeyValuePairInput("app", "demo")))
+        ))
+
+        val generations = sdk.flush()
+        assertEquals(generations.size, 1)
+        assertEquals(
+            generations[0].generation.meta.getOrNull()!!.toTypedArray().associate {  it.key to it.value },
+            mapOf("env" to "test", "version" to "2.0", "app" to "demo")
+        )
+    }
 }

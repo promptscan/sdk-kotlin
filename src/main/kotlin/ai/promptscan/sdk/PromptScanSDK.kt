@@ -2,7 +2,9 @@ package ai.promptscan.sdk
 
 import ai.promptscan.sdk.client.CollectGenerationsMutation
 import ai.promptscan.sdk.client.type.GenerationInput
+import ai.promptscan.sdk.client.type.KeyValuePairInput
 import ai.promptscan.sdk.graphql.GraphQLClient
+import com.apollographql.apollo3.api.Optional
 import kotlinx.coroutines.*
 import java.io.Closeable
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -15,24 +17,28 @@ class PromptScanSDK private constructor(
     val graphQLClient: GraphQLClient,
     private val generations: ConcurrentLinkedQueue<GenerationRecord>,
     private val flushIntervalMillis: Long,
-    private val maxRetries: Int = 3,
-    private var autoFlush: Boolean = true
+    private val maxRetries: Int,
+    private var autoFlush: Boolean,
+    private var enabled: Boolean,
+    val defaultMeta: Map<String, String>
 ) : Closeable {
     companion object {
-        private const val DEFAULT_API_KEY_ENV = "PROMPTSCAN_API_KEY"
-        private const val DEFAULT_BASE_URL_ENV = "PROMPTSCAN_BASE_URL"
-        private const val DEFAULT_BASE_URL = "https://api.promptscan.ai/graphql/"
-
         class Builder {
-            private var apiKey: String? = System.getenv(DEFAULT_API_KEY_ENV)
-            private var baseUrl: String = System.getenv(DEFAULT_BASE_URL_ENV) ?: DEFAULT_BASE_URL
+            private var apiKey: String? = System.getenv("PROMPTSCAN_API_KEY")
+            private var baseUrl: String = System.getenv("PROMPTSCAN_BASE_URL") ?: "https://api.promptscan.ai/graphql/"
             private var flushIntervalMillis: Long = 5000L
             private var autoFlush: Boolean = true
+            private var maxRetries: Int = 3
+            private var enabled: Boolean = true
+            private var defaultMeta: Map<String, String> = emptyMap()
 
             fun apiKey(apiKey: String) = apply { this.apiKey = apiKey }
             fun baseUrl(baseUrl: String) = apply { this.baseUrl = baseUrl }
             fun flushIntervalMillis(flushIntervalMillis: Long) = apply { this.flushIntervalMillis = flushIntervalMillis }
             fun autoFlush(autoFlush: Boolean) = apply { this.autoFlush = autoFlush }
+            fun enabled(enabled: Boolean) = apply { this.enabled = enabled }
+            fun maxRetries(maxRetries: Int) = apply { this.maxRetries = maxRetries }
+            fun defaultMeta(defaultMeta: Map<String, String>) = apply { this.defaultMeta = defaultMeta }
 
             fun build(): PromptScanSDK {
                 if (apiKey == null) {
@@ -48,7 +54,10 @@ class PromptScanSDK private constructor(
                     graphQLCLient,
                     ConcurrentLinkedQueue<GenerationRecord>(),
                     flushIntervalMillis,
-                    autoFlush=autoFlush
+                    maxRetries,
+                    autoFlush,
+                    enabled,
+                    defaultMeta
                 )
             }
         }
@@ -88,11 +97,21 @@ class PromptScanSDK private constructor(
         this.autoFlush = autoFlush
     }
 
+    fun setEnabled(enabled: Boolean) {
+        this.enabled = enabled
+    }
+
     fun collectGeneration(generation: GenerationInput, apikey: String? = null) {
+        if (!enabled) {
+            return
+        }
         generations.offer(GenerationRecord(generation, apikey))
     }
 
     fun collectGeneration(generation: GenerationInput) {
+        if (!enabled) {
+            return
+        }
         generations.offer(GenerationRecord(generation, null))
     }
 
@@ -103,16 +122,35 @@ class PromptScanSDK private constructor(
     suspend fun flush(): List<GenerationRecord> {
         // Pop all elements from the queue into a local list
         val collectableGenerations = mutableListOf<GenerationRecord>()
-        val flushedGenerations = mutableListOf<GenerationRecord>()
 
         while (true) {
             val gen = generations.poll() ?: break
             collectableGenerations.add(gen)
         }
 
+        if (!enabled) {
+            return collectableGenerations
+        }
+
+        val flushedGenerations = mutableListOf<GenerationRecord>()
+
         // Group the generations by API key
         val grouped = collectableGenerations
             .filter { it.retries < maxRetries }
+            .map {
+                val meta = mutableMapOf<String, String>(*defaultMeta.toList().toTypedArray())
+                if (it.generation.meta.getOrNull() != null) {
+                    for (pair in it.generation.meta.getOrNull()!!) {
+                        meta[pair.key] = pair.value
+                    }
+                }
+
+                it.generation = it.generation.copy(meta = Optional.present(meta.toList().map { (key, value) ->
+                    KeyValuePairInput(key, value)
+                }))
+
+                it
+            }
             .groupBy { it.apiKey }
             .map { (key, value) ->  key to value }
 
@@ -163,7 +201,7 @@ class PromptScanSDK private constructor(
 
 
 class GenerationRecord(
-    val generation: GenerationInput,
+    var generation: GenerationInput,
     val apiKey: String?
 ) {
     var retries = 0

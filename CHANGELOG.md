@@ -1,14 +1,10 @@
 # Changelog
 
 ### Added
-- Initial release of the PromptScan Kotlin SDK
-- GraphQL client implementation
-- Basic SDK functionality for interacting with PromptScan API
-- Java and Kotlin support
-- Unit tests for core functionality
+- N/A
 
 ### Changed
-- N/A
+- default meta tags can be passed to SDK to be appended to generation meta.
 
 ### Deprecated
 - N/A

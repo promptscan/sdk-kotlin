@@ -1,9 +1,6 @@
 package ai.promptscan.sdk;
 
-import ai.promptscan.sdk.client.type.GenerationInput;
-import ai.promptscan.sdk.client.type.GenerationMessageInput;
-import ai.promptscan.sdk.client.type.KeyValuePairInput;
-import ai.promptscan.sdk.client.type.UsageInput;
+import ai.promptscan.sdk.client.type.*;
 import com.apollographql.apollo3.api.Optional;
 import kotlinx.coroutines.BuildersKt;
 import kotlinx.coroutines.Dispatchers;
@@ -13,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,11 +57,16 @@ public class PromptScanSDKJavaTest {
                 Optional.present(20),
                 Optional.present(20),
                 Optional.present(40),
-                Optional.absent(),
-                Optional.absent()
-            ))
-            ,
-            Optional.present(Arrays.asList(new KeyValuePairInput("user_id", "xyz"))),
+                Optional.present(new PromptTokensDetailsInput(
+                    Optional.present(0),
+                    Optional.present(0)
+                )),
+                Optional.present(new CompletionTokensDetailsInput(
+                    Optional.present(0),
+                    Optional.present(0)
+                ))
+            )),
+            Optional.present(List.of(new KeyValuePairInput("user_id", "xyz"))),
             Optional.present(OffsetDateTime.now()),
             Optional.present(0.125),
             Optional.present(0.450)
