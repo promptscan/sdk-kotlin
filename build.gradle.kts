@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "ai.promptscan"
-version = "0.1.1"
+version = "0.1.2"
 
 repositories {
     mavenCentral()
@@ -106,37 +106,3 @@ publishing {
         }
     }
 }
-
-//publishing {
-//    repositories {
-//        maven {
-//            name = "GitHubPackages"
-//            url = uri("https://maven.pkg.github.com/OWNER/REPOSITORY")
-//            credentials {
-//                username = System.getenv("GITHUB_ACTOR")
-//                password = System.getenv("GITHUB_TOKEN")
-//            }
-//        }
-//    }
-//    publications {
-//        create<MavenPublication>("maven") {
-//            groupId = "ai.promptscan"
-//            artifactId = "promptscan-sdk"
-//            version = project.version.toString()
-//
-//            from(components["java"])
-//
-//            pom {
-//                name.set("PromptScan SDK Kotlin")
-//                description.set("Kotlin SDK for PromptScan API")
-//                url.set("https://github.com/OWNER/REPOSITORY")
-//                licenses {
-//                    license {
-//                        name.set("The Apache License, Version 2.0")
-//                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}

@@ -4,8 +4,7 @@
 - N/A
 
 ### Changed
-- option for enabling / disabling debug messages.
-- java example.
+- N/A
 
 ### Deprecated
 - N/A
@@ -14,7 +13,7 @@
 - N/A
 
 ### Fixed
-- N/A
+- meta renamed to tags
 
 ### Security
 - N/A

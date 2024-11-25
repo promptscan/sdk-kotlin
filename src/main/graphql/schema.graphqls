@@ -22,9 +22,9 @@ input GenerationFeatureFilterInput {
 
   semanticGroupIds: [UUID!]
 
-  outputName: String
+  name: String
 
-  outputValues: [StringOrNumber!]
+  values: [StringOrNumber!]
 
   query: String
 
@@ -54,9 +54,9 @@ type GenerationFeatureSpecResultPage {
 }
 
 type GenerationFeatureSpec {
-  outputName: String!
+  name: String!
 
-  outputType: String!
+  type: String!
 
   detectors: [Detector!]
 
@@ -119,17 +119,21 @@ type Query {
 
   suggestDetectorSpec(description: String!): DetectorSuggestion
 
-  tags(dimensions: [GenerationTagGroupDimension!]!, filterBy: TagFilterInput, page: PageInput): MetricResultPage!
-
   generation(generationId: UUID!): Generation
 
   generations(filterBy: GenerationFilterInput, page: PageInput): GenerationResultPage!
+
+  generationTags(filterBy: GenerationTagFilterInput, page: PageInput): GenerationTagResultPage!
+
+  generationModels(filterBy: GenerationModelFilterInput, page: PageInput): GenerationModelResultPage!
 
   generationStats(dimensions: [GenerationGroupDimension!]!, filterBy: GenerationFilterInput, granularity: DateTimeGranularity! = day, maxMetricsPerPeriod: Int! = 5): [StatsMetric!]
 
   issue(issueId: UUID!): Issue
 
   issues(filterBy: IssueFilterInput, page: PageInput): IssueResultPage!
+
+  issueCategories(filterBy: IssueFilterInput, page: PageInput): IssueCategoryResultPage!
 
   issuesStats(dimensions: [IssueGroupDimension!]!, filterBy: IssueFilterInput, granularity: DateTimeGranularity = day, maxMetricsPerPeriod: Int = 5): [StatsMetric!]
 
@@ -538,10 +542,18 @@ enum GenerationGroupDimension {
   project
 }
 
-input TagFilterInput {
+input GenerationTagFilterInput {
   projectIds: [UUID!]
 
-  relativeTimeDelta: String
+  key: String
+
+  relativeTimeDelta: String!
+}
+
+input GenerationModelFilterInput {
+  projectIds: [UUID!]
+
+  relativeTimeDelta: String!
 }
 
 input GenerationFilterInput {
@@ -556,6 +568,18 @@ input GenerationFilterInput {
   relativeTimeDelta: String!
 
   query: String
+}
+
+type GenerationModelResultPage {
+  items: [String!]!
+
+  pageInfo: PageInfo
+}
+
+type GenerationTagResultPage {
+  items: [KeyValuePair!]!
+
+  pageInfo: PageInfo
 }
 
 type MetricResultPage {
@@ -650,6 +674,12 @@ input IssueFilterInput {
   policyRuleIds: [UUID!]
 
   relativeTimeDelta: String
+}
+
+type IssueCategoryResultPage {
+  items: [String!]!
+
+  pageInfo: PageInfo
 }
 
 type IssueResultPage {
@@ -929,7 +959,7 @@ input GenerationInput {
 
   usage: UsageInput
 
-  meta: [KeyValuePairInput!]
+  tags: [KeyValuePairInput!]
 
   created: DateTime
 
@@ -1011,11 +1041,9 @@ type EntityLocation {
 }
 
 type GenerationFeature {
-  name: String! @deprecated(reason: "No longer supported")
+  name: String!
 
-  outputName: String!
-
-  outputType: String!
+  type: String!
 
   value: StringOrNumber!
 

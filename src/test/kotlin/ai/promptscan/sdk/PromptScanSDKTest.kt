@@ -193,7 +193,7 @@ class PromptScanSDKTest {
         val defaultTags = mapOf("env" to "test", "version" to "1.0")
         val sdk = PromptScanSDK.builder()
             .apiKey("test-key")
-            .defaultMeta(defaultTags)
+            .defaultTags(defaultTags)
             .autoFlush(false)
             .build()
             
@@ -201,13 +201,13 @@ class PromptScanSDKTest {
             id = Optional.Present("a"),
             model = "m",
             messages = ArrayList(),
-            meta = Optional.Present(listOf(KeyValuePairInput("version", "2.0"), KeyValuePairInput("app", "demo")))
+            tags = Optional.Present(listOf(KeyValuePairInput("version", "2.0"), KeyValuePairInput("app", "demo")))
         ))
 
         val generations = sdk.flush()
         assertEquals(generations.size, 1)
         assertEquals(
-            generations[0].generation.meta.getOrNull()!!.toTypedArray().associate {  it.key to it.value },
+            generations[0].generation.tags.getOrNull()!!.toTypedArray().associate { it.key to it.value },
             mapOf("env" to "test", "version" to "2.0", "app" to "demo")
         )
     }

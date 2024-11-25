@@ -21,7 +21,7 @@ class PromptScanSDK private constructor(
     private var autoFlush: Boolean,
     private var enabled: Boolean,
     private var debug: Boolean,
-    val defaultMeta: Map<String, String>
+    val defaultTags: Map<String, String>
 ) : Closeable {
     companion object {
         class Builder {
@@ -32,7 +32,7 @@ class PromptScanSDK private constructor(
             private var maxRetries: Int = 3
             private var enabled: Boolean = true
             private var debug: Boolean = false
-            private var defaultMeta: Map<String, String> = emptyMap()
+            private var defaultTags: Map<String, String> = emptyMap()
 
             fun apiKey(apiKey: String) = apply { this.apiKey = apiKey }
             fun baseUrl(baseUrl: String) = apply { this.baseUrl = baseUrl }
@@ -40,7 +40,7 @@ class PromptScanSDK private constructor(
             fun autoFlush(autoFlush: Boolean) = apply { this.autoFlush = autoFlush }
             fun enabled(enabled: Boolean) = apply { this.enabled = enabled }
             fun maxRetries(maxRetries: Int) = apply { this.maxRetries = maxRetries }
-            fun defaultMeta(defaultMeta: Map<String, String>) = apply { this.defaultMeta = defaultMeta }
+            fun defaultTags(defaultTags: Map<String, String>) = apply { this.defaultTags = defaultTags }
             fun debug(debug: Boolean) = apply { this.debug = debug }
 
             fun build(): PromptScanSDK {
@@ -61,7 +61,7 @@ class PromptScanSDK private constructor(
                     autoFlush,
                     enabled,
                     debug,
-                    defaultMeta
+                    defaultTags
                 )
             }
 
@@ -160,14 +160,14 @@ class PromptScanSDK private constructor(
         val grouped = collectableGenerations
             .filter { it.retries < maxRetries }
             .map {
-                val meta = mutableMapOf<String, String>(*defaultMeta.toList().toTypedArray())
-                if (it.generation.meta.getOrNull() != null) {
-                    for (pair in it.generation.meta.getOrNull()!!) {
-                        meta[pair.key] = pair.value
+                val tags = mutableMapOf<String, String>(*defaultTags.toList().toTypedArray())
+                if (it.generation.tags.getOrNull() != null) {
+                    for (pair in it.generation.tags.getOrNull()!!) {
+                        tags[pair.key] = pair.value
                     }
                 }
 
-                it.generation = it.generation.copy(meta = Optional.present(meta.toList().map { (key, value) ->
+                it.generation = it.generation.copy(tags = Optional.present(tags.toList().map { (key, value) ->
                     KeyValuePairInput(key, value)
                 }))
 
